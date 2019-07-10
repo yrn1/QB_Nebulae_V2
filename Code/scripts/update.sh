@@ -15,7 +15,7 @@ then
     echo "Copying neb_update.zip to Backup Directory"
     cp -R /mnt/memory/neb_update.zip /home/alarm/backup/new
     echo "Extracting Contents of neb_update.zip"
-    tar -xvf /home/alarm/backup/new/neb_update.zip -C /home/alarm/backup/new/
+    tar -xvmf /home/alarm/backup/new/neb_update.zip -C /home/alarm/backup/new/
     if [ -d /home/alarm/backup/new/QB_Nebulae_V2/Code/nebulae/ ]; then
         # TODO: This can be built upon to check for a list of directories, etc.
         target="/home/alarm/backup/new/QB_Nebulae_V2/Code/nebulae/"
@@ -28,7 +28,7 @@ then
             echo "Moving new code into place."
             mv /home/alarm/backup/new/QB_Nebulae_V2/ /home/alarm/
             echo "Changing owner of entire directory from root to alarm"
-            chown -R alarm:alarm QB_Nebulae_V2/
+            sudo chown -R alarm:alarm /home/alarm/QB_Nebulae_V2/
         else
             echo "There are no contents within QB_Nebulae_V2/Code/nebulae/"
             echo "The update was improperly prepared."

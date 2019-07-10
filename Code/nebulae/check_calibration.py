@@ -5,6 +5,7 @@ import switch
 import calibration_collector
 import sys
 import time
+import neb_globals
 
 def launch_bootled():
     cmd = "sudo pkill -1 -f /home/alarm/QB_Nebulae_V2/Code/nebulae/bootleds.py"
@@ -13,7 +14,7 @@ def launch_bootled():
     fullCmd = "python2 /home/alarm/QB_Nebulae_V2/Code/nebulae/bootleds.py calibration"
     led_process = Popen(fullCmd, shell=True)
     print 'led process created: ' + str(led_process)
- 
+
 def kill_bootled():
     cmd = "sudo pkill -1 -f /home/alarm/QB_Nebulae_V2/Code/nebulae/bootleds.py"
     os.system(cmd)
@@ -27,25 +28,23 @@ else:
     arg = None
 collector = calibration_collector.CalibrationCollector()
 pitch_click = switch.Switch(22) # Pitch Encoder Click GPIO
-pitch_click.update() 
+pitch_click.update()
 if pitch_click.state() == True or arg == 'force':
     launch_bootled()
     #time.sleep(2)
     print 'Calibration commencing'
     collector.collect()
     # Clear out settings and factory reset
-    if neb_globals.remount_fs is True:
-        os.system("sh /home/alarm/QB_Nebulae_V2/Code/scripts/mountfs.sh rw")
+    # if neb_globals.remount_fs is True: 									# Commented out this line (danishfurniture)
+    os.system("sh /home/alarm/QB_Nebulae_V2/Code/scripts/mountfs.sh rw")	# Unindented this line
     cmd = "rm /home/alarm/QB_Nebulae_V2/Code/config/bootinstr.txt"
-    os.system(cmd) 
+    os.system(cmd)
     cmd = "rm /home/alarm/QB_Nebulae_V2/Code/config/nebsettings.txt"
-    os.system(cmd) 
+    os.system(cmd)
     cmd = "rm /home/alarm/QB_Nebulae_V2/Code/config/buffer_cnt.txt"
-    os.system(cmd) 
-    if neb_globals.remount_fs is True:
-        os.system("sh /home/alarm/QB_Nebulae_V2/Code/scripts/mountfs.sh ro")
+    os.system(cmd)
+    # if neb_globals.remount_fs is True:									# Commented out this line (danishfurniture)
+    os.system("sh /home/alarm/QB_Nebulae_V2/Code/scripts/mountfs.sh ro")	# Unindented this line
 else:
     print 'Skipping Calibration'
 kill_bootled()
-
-

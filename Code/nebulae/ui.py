@@ -15,7 +15,7 @@ sr_pin_freeze = 4
 sr_pin_record = 3
 sr_pin_reset = 0
 
-        
+
 class UserInterface(object):
     def __init__(self, controlhandler):
         self.controlhandler = controlhandler
@@ -64,7 +64,7 @@ class UserInterface(object):
         elif cur_bank == "puredata":
             cnt = self.puredata_fhandle.numFiles()
         self.controlhandler.setInstrSelNumFiles(cnt)
-        self.reload_flag = False # Flag to reload the whole program. 
+        self.reload_flag = False # Flag to reload the whole program.
         self.alt_file_bright = 0.0
         self.alt_file_cnt = 0.0
         self.blink_counter = 0
@@ -75,13 +75,16 @@ class UserInterface(object):
         self.ignore_next_speed_click = False
         self.clearAllLEDs()
         self.restoreDefaultsFlag = False
+        self.fileAltNextLED = 0
+        self.ResetLED = 0
+        self.recordLED = 0
 
     def update(self):
         self.now = int(round(time.time() * 1000))
         if self.reload_flag == False:
             self.ledDriver.update()
-        self.pitch_click.update() 
-        self.speed_click.update() 
+        self.pitch_click.update()
+        self.speed_click.update()
         self.delta_p = self.encoder_pitch.get_steps()
         self.delta_s = self.encoder_speed.get_steps()
         self.mode = self.controlhandler.mode()
@@ -100,11 +103,36 @@ class UserInterface(object):
                 self.set_button_led("source", self.controlhandler.getAltLEDValue("source_alt"))
                 self.set_button_led("record", self.controlhandler.getAltLEDValue("record_alt"))
                 self.set_button_led("reset", self.controlhandler.getAltLEDValue("reset_alt"))
-                if self.currentInstr == "a_granularlooper":
+
+
+
+############ Begin use file alt next LED in other instruments (danishfurniture)
+            # Requires one of these lines in 'nebconfigbegin' area of instr code: 'AllOriginalUniques,1' or 'FileAltNextLED,1'
+
+
+                if self.controlhandler.configData is not None:
+                    if "AllOriginalUniques" in self.controlhandler.configData:
+                        if (int(self.controlhandler.configData.get("AllOriginalUniques")[0])) != 0:
+                            self.fileAltNextLED = 1
+                    elif "FileAltNextLED" in self.controlhandler.configData:
+                        if (int(self.controlhandler.configData.get("FileAltNextLED")[0])) != 0:
+                            self.fileAltNextLED = int(self.controlhandler.configData.get("FileAltNextLED")[0])
+                        else:
+                            self.fileAltNextLED = 0
+                    else:
+                        self.fileAltNextLED = 0
+
+                # if self.currentInstr == "a_granularlooper": # OriginalCode
+                if any( [ (self.currentInstr == "a_granularlooper") , (self.fileAltNextLED != 0) ] ):
                     next_mode = self.controlhandler.getAltValue("file_alt")
                     self.setAltNextLed(next_mode)
                 else:
                     self.set_button_led("next", self.controlhandler.getAltLEDValue("file_alt"))
+
+############ End use file alt next LED in other instruments (danishfurniture)
+
+
+
         elif self.mode == "instr selector":
             self.displayInstrSel()
         else: # Includes Normal Behavior
@@ -128,11 +156,11 @@ class UserInterface(object):
             elif self.controlhandler.getEditFunctionFlag("source") == True:
                 self.animateEditFunction("source")
                 if self.controlhandler.currentBank == 'factory':
-                    tempidx = self.factoryinstr_fhandle.getIndex(self.controlhandler.currentInstr) 
+                    tempidx = self.factoryinstr_fhandle.getIndex(self.controlhandler.currentInstr)
                 elif self.controlhandler.currentBank == 'user':
-                    tempidx = self.userinstr_fhandle.getIndex(self.controlhandler.currentInstr) 
+                    tempidx = self.userinstr_fhandle.getIndex(self.controlhandler.currentInstr)
                 elif self.controlhandler.currentBank == 'puredata':
-                    tempidx = self.puredatainstr_fhandle.getIndex(self.controlhandler.currentInstr) 
+                    tempidx = self.puredatainstr_fhandle.getIndex(self.controlhandler.currentInstr)
                 self.controlhandler.setInstrSelIdx(tempidx)
                 self.controlhandler.setInstrSelBank(self.controlhandler.currentBank)
                 self.reload_flag = True
@@ -141,8 +169,25 @@ class UserInterface(object):
             elif self.controlhandler.buffer_failure == True:
                 self.animateBufferFailure()
                 #self.animateEditFunction("freeze")
+
+
+############ Begin use reset LEDs in other instruments (danishfurniture)
+            # Requires one of these lines in 'nebconfigbegin' area of instr code: 'AllOriginalUniques,1' or 'ResetLEDAtEOL,1'
+
             else:
-                if self.currentInstr == "a_granularlooper":
+                if self.controlhandler.configData is not None:
+                    if "AllOriginalUniques" in self.controlhandler.configData:
+                        if (int(self.controlhandler.configData.get("AllOriginalUniques")[0])) != 0:
+                            self.ResetLED = 1
+                    elif "ResetLEDAtEOL" in self.controlhandler.configData:
+                        if (int(self.controlhandler.configData.get("ResetLEDAtEOL")[0])) != 0:
+                            self.ResetLED = int(self.controlhandler.configData.get("ResetLEDAtEOL")[0])
+                        else:
+                            self.ResetLED = 0
+                    else:
+                        self.ResetLED = 0
+
+                if any( [ (self.currentInstr == "a_granularlooper") , (self.ResetLED != 0) ] ): # If default instrument or "ResetLEDAtEOL" =1 (danishfurniture)
                     if self.controlhandler.size_status_comm.getState() == 0:
                         #self.set_button_led("reset", self.controlhandler.getEndOfLoopState())
                         if self.controlhandler.eol_comm.getState() > 0:
@@ -158,9 +203,54 @@ class UserInterface(object):
                     else:
                         self.set_button_led("reset", 0.0)
 
+############ End use reset LEDs in other instruments (danishfurniture)
+
+
+
+########### OriginalCode
+
+            # else:
+            #     if self.currentInstr == "a_granularlooper":
+            #         if self.controlhandler.size_status_comm.getState() == 0:
+            #             #self.set_button_led("reset", self.controlhandler.getEndOfLoopState())
+            #             if self.controlhandler.eol_comm.getState() > 0:
+            #                 self.set_button_led("reset", 1.0)
+            #             else:
+            #                 self.set_button_led("reset", 0.0)
+            #         else:
+            #             self.set_button_led("reset", 1.0)
+            #     else:
+            #         state = self.controlhandler.getLEDValue("reset")
+            #         if state == True or state == 1:
+            #             self.set_button_led("reset", 1.0)
+            #         else:
+            #             self.set_button_led("reset", 0.0)
+
+########### End OriginalCode
+
+##########
+              # Begin test of new communications channels (from Csound to Python)(danishfurniture)
+
+              # self.controlhandler.opt1.update()                     # Update the status of opt1 (which is also 'option1' and 'gkoption1')
+              # if self.controlhandler.getLEDValue("freeze")!= 1:       # Don't change the 'freeze' lamp if freeze is engaged
+              #     if self.controlhandler.opt1.getState() != 0:        # Check to see if opt1 is set to not 0
+              #         self.set_button_led("freeze", 1.0)              # Light up the 'freeze' lamp if the new communcations channel is working, if 'window' is set to
+              #     else:                                               # the 4th choice or higher
+              #         self.set_button_led("freeze", 0.0)              # It works!
+
+                if self.controlhandler.opt1.getState() != 0:      # Check to see if opt1 is set to not 0
+                    self.set_button_led("next", 1.0)              # Light up the 'file' lamp if the new communcations channel is working, if 'window' is set to
+                else:                                             # the 8th choice or higher (set in Csound code)
+                    self.set_button_led("next", 0.0)              # It works!
+
+
+              # End test of new communications channels (danishfurniture)
+##########
+
+
         self.update_speed(self.mode)
         self.update_pitch(self.mode)
-    
+
     def clearAllLEDs(self):
         self.set_rgb("pitch_pos", 4095, 4095, 4095, 0.0)
         self.set_rgb("pitch_neg", 4095, 4095, 4095, 0.0)
@@ -177,7 +267,7 @@ class UserInterface(object):
         blink = (self.now & 500) > 250
         low_bright = 0.3
         if self.controlhandler.getInstrSelBank() == "factory":
-            f_handle = self.factoryinstr_fhandle 
+            f_handle = self.factoryinstr_fhandle
         elif self.controlhandler.getInstrSelBank() == "user":
             f_handle = self.userinstr_fhandle
         elif self.controlhandler.getInstrSelBank() == "puredata":
@@ -217,7 +307,7 @@ class UserInterface(object):
                 else:
                     val = low_bright
             values[4] = val
-        
+
         #print "Instr Sel Bank: " + self.controlhandler.getInstrSelBank()
         #print "Instr Sel Num files: " + str(f_handle.numFiles())
         #s = f_handle.getFilename(idx)
@@ -240,7 +330,7 @@ class UserInterface(object):
                 if self.blink == False and self.prev_blink == True:
                     self.blink_counter += 1
                 if self.blink == True:
-                    self.set_button_led(name, 1) 
+                    self.set_button_led(name, 1)
                 else:
                     self.set_button_led(name, 0)
             else:
@@ -255,11 +345,11 @@ class UserInterface(object):
         self.prev_blink = self.blink
         self.blink = (self.now & 500) < 250
         if self.blink == True:
-            self.set_button_led("freeze", 1) 
-            self.set_button_led("record", 1) 
+            self.set_button_led("freeze", 1)
+            self.set_button_led("record", 1)
         else:
-            self.set_button_led("freeze", 0) 
-            self.set_button_led("record", 0) 
+            self.set_button_led("freeze", 0)
+            self.set_button_led("record", 0)
 
     def animateBufferFailure(self):
         self.prev_blink = self.blink
@@ -269,28 +359,28 @@ class UserInterface(object):
                 if self.blink == True:
                     if self.prev_blink == False:
                         self.blink_counter += 1
-                    self.set_button_led("record", 1) 
-                    self.set_button_led("next", 1) 
-                    self.set_button_led("source", 1) 
+                    self.set_button_led("record", 1)
+                    self.set_button_led("next", 1)
+                    self.set_button_led("source", 1)
                     self.set_button_led("reset", 1)
-                    self.set_button_led("freeze", 1) 
+                    self.set_button_led("freeze", 1)
                 else:
-                    self.set_button_led("record", 0) 
-                    self.set_button_led("next", 0) 
-                    self.set_button_led("source", 0) 
+                    self.set_button_led("record", 0)
+                    self.set_button_led("next", 0)
+                    self.set_button_led("source", 0)
                     self.set_button_led("reset", 0)
-                    self.set_button_led("freeze", 0) 
+                    self.set_button_led("freeze", 0)
             else:
                 self.controlhandler.buffer_failure = False
                 self.blink_counter = 0
-                self.set_button_led("record", 0) 
-                self.set_button_led("next", 0) 
-                self.set_button_led("source", 0) 
+                self.set_button_led("record", 0)
+                self.set_button_led("next", 0)
+                self.set_button_led("source", 0)
                 self.set_button_led("reset", 0)
-                self.set_button_led("freeze", 0) 
+                self.set_button_led("freeze", 0)
         else:
             self.blink = False
-                
+
     def animateRestoration(self):
         ## TODO: The abstraction could actually do this animation for any of the four buttons (file, source, reset, freeze)
         if self.blink_counter < 4:
@@ -300,7 +390,7 @@ class UserInterface(object):
                 self.blink_counter += 1
             for name in ["reset", "record", "next", "source", "freeze"]:
                 if self.blink == True:
-                    self.set_button_led(name, 1) 
+                    self.set_button_led(name, 1)
                 else:
                     self.set_button_led(name, 0)
         else:
@@ -315,7 +405,7 @@ class UserInterface(object):
 
     def pressed_speed(self):
         return self.speed_click.state()
-        
+
 
     def clicked_pitch(self):
         if self.pitch_click.fallingEdge():
@@ -394,7 +484,7 @@ class UserInterface(object):
             #self.alt_speed_amount = 0.710 # 23/32 = 0dB input gain
             self.alt_speed_amount = 23
         self.controlhandler.setAltValue("speed_alt", self.alt_speed_amount)
-    
+
     # Returns duple of neg_brightness, pos_brightness
     def set_speed_leds(self, mode):
         if mode == "normal" or mode == "puredata":
@@ -438,7 +528,7 @@ class UserInterface(object):
             elif abs_speed < factors[5]:
                 highest_factor = 5
 
-            if highest_factor < 1: 
+            if highest_factor < 1:
                 scalar = (abs_speed / factors[0])
                 newcolor = colororder[0]
                 color_pos = newcolor
@@ -453,8 +543,8 @@ class UserInterface(object):
                 newcolor = self.blendColor(colororder[highest_factor-1], colororder[highest_factor], scalar)
                 color_pos = newcolor
                 color_neg = newcolor
-            for idx, factor in enumerate(factors): 
-                if (abs(translated_speed) > factor - 0.0075) and abs(translated_speed) < factor + 0.0075:  
+            for idx, factor in enumerate(factors):
+                if (abs(translated_speed) > factor - 0.0075) and abs(translated_speed) < factor + 0.0075:
                     if translated_speed > 0:
                         color_pos = colororder[idx]
                         speed_pos_bright = 1.0
@@ -468,12 +558,41 @@ class UserInterface(object):
                 speed_pos_bright = 0
             if speed_neg_bright < 0:
                 speed_neg_bright = 0
-            if self.currentInstr == "a_granularlooper":
+
+########### Begin use red speed LEDs during recording (danishfurniture)
+
+            if self.controlhandler.configData is not None:
+                if "AllOriginalUniques" in self.controlhandler.configData:
+                    if (int(self.controlhandler.configData.get("AllOriginalUniques")[0])) != 0:
+                        self.recordLED = 1
+                elif "RecordRedLEDs" in self.controlhandler.configData:
+                    if (int(self.controlhandler.configData.get("RecordRedLEDs")[0])) != 0:
+                        self.recordLED = int(self.controlhandler.configData.get("RecordRedLEDs")[0])
+                    else:
+                        self.recordLED = 0
+                else:
+                    self.recordLED = 0
+
+            if any( [ (self.currentInstr == "a_granularlooper") , (self.recordLED != 0) ] ): # If default instrument or if "RecordRedLEDs" set in 'nebconfigbegin' # End use red speed LEDs during recording (danishfurniture)
                 if self.controlhandler.channeldict["record"].curVal == 1:
                     color_neg = red
                     color_pos = red
                     speed_neg_bright = 1.0
                     speed_pos_bright = 1.0
+
+########### End use red speed LEDs during recording (danishfurniture)
+
+########## Begin OriginalCode
+
+            # if self.currentInstr == "a_granularlooper":
+            #     if self.controlhandler.channeldict["record"].curVal == 1:
+            #         color_neg = red
+            #         color_pos = red
+            #         speed_neg_bright = 1.0
+            #         speed_pos_bright = 1.0
+
+########## End OriginalCode
+
             self.set_rgb("speed_neg", color_neg.red(), color_neg.green(),color_neg.blue(), speed_neg_bright)
             self.set_rgb("speed_pos", color_pos.red(), color_pos.green(),color_pos.blue(), speed_pos_bright)
         elif mode == "secondary controls":
@@ -489,7 +608,7 @@ class UserInterface(object):
                 tempc = libDriver.Color(0, 4095, 0)
             else:
                 tempc = libDriver.Color(3037, 200, 3825)
-            self.set_rgb("speed_neg", tempc.red(), tempc.green(), tempc.blue(), speed_neg_bright) 
+            self.set_rgb("speed_neg", tempc.red(), tempc.green(), tempc.blue(), speed_neg_bright)
             self.set_rgb("speed_pos", tempc.red(), tempc.green(), tempc.blue(), speed_pos_bright)
         elif mode == "instr selector":
             tempc = libDriver.Color(0, 4095, 0)
@@ -504,7 +623,7 @@ class UserInterface(object):
                 self.set_rgb("speed_pos", tempc.red(), tempc.green(), tempc.blue(), 1.0)
         else:
             pass
-    
+
     def update_speed(self, mode):
         if mode == "normal" or mode == "puredata":
             if self.speed_click.risingEdge() == True:
@@ -534,7 +653,7 @@ class UserInterface(object):
                 self.bank_shift_counter = -1 * thresh
 
             #print "bank shift counter: " + str(self.bank_shift_counter)
-                
+
 
             if cur_bank == "user" and self.bank_shift_counter >= thresh:
                 self.bank_shift_counter = 0
@@ -556,7 +675,7 @@ class UserInterface(object):
 
             if self.clicked_speed() == 1:
                 print "Clicked Speed from Instr Sel"
-                self.reload_flag = True 
+                self.reload_flag = True
         else:
             pass
         self.set_speed_leds(mode)
@@ -656,7 +775,7 @@ class UserInterface(object):
             if pitch_amt > original_pitch + tolerance:
                 # handle blending up ward
                 if pitch_amt > octaves[5]:
-                    scalar = (pitch_amt - octaves[5]) * 5.00   
+                    scalar = (pitch_amt - octaves[5]) * 5.00
                     pos_color = self.blendColor(colororder[5], colororder[0], scalar)
                 elif pitch_amt > octaves[4]:
                     ## Blend green to purple
@@ -715,14 +834,14 @@ class UserInterface(object):
             blink = (self.now & 150) > 75
             if amt < 0.001 and self.pitch_blink_anim_flag == True:
                 if blink == True:
-                    neg_bright = 1.0 
+                    neg_bright = 1.0
                 else:
                     neg_bright = 0.0
                     if self.now - self.pitch_blink_timer > 450:
                         self.pitch_blink_anim_flag = False
             if amt > 0.99 and self.pitch_blink_anim_flag == True:
                 if blink == True:
-                    pos_bright = 1.0 
+                    pos_bright = 1.0
                 else:
                     pos_bright = 0.0
                     if self.now - self.pitch_blink_timer > 450:
@@ -735,7 +854,7 @@ class UserInterface(object):
             self.set_rgb("pitch_pos", tempc.red(), tempc.green(), tempc.blue(), 1.0)
         else:
             pass
-            
+
 
     def update_pitch(self, mode):
         if mode == "normal" or mode == "puredata":
@@ -749,7 +868,7 @@ class UserInterface(object):
                 self.controlhandler.restoreAltToDefault()
         elif mode == "instr selector":
             if self.controlhandler.getInstrSelBank() == "factory":
-                f_handle = self.factoryinstr_fhandle 
+                f_handle = self.factoryinstr_fhandle
             elif self.controlhandler.getInstrSelBank() == "user":
                 f_handle = self.userinstr_fhandle
             elif self.controlhandler.getInstrSelBank() == "puredata":
@@ -767,7 +886,7 @@ class UserInterface(object):
                 self.controlhandler.setInstrSelOffset(offset)
         else:
             pass
-                
+
         if mode == "instr selector":
             if self.clicked_pitch():
                 #print "current Instr: " + str(self.currentInstr)
@@ -782,7 +901,7 @@ class UserInterface(object):
         self.set_pitch_leds(mode)
 
     def set_rgb(self, name, r, g, b, bright=1.0):
-        self.ledDriver.set_rgb(name, r, g, b, bright)       
+        self.ledDriver.set_rgb(name, r, g, b, bright)
 
     def set_button_led(self, name, bright):
         self.ledDriver.set_button_led(name, bright)
@@ -822,6 +941,7 @@ class UserInterface(object):
             if idx < self.userinstr_fhandle.numFiles():
                 instr = self.userinstr_fhandle.getFilename(idx)
         elif self.controlhandler.getInstrSelBank() == "puredata":
+            print "puredata chosen - numfiles =" + str(self.puredata_fhandle.numFiles())
             if idx < self.puredata_fhandle.numFiles():
                 instr = self.puredata_fhandle.getFilename(idx)
         return instr

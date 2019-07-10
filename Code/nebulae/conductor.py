@@ -50,6 +50,17 @@ gkreset_alt chnexport "reset_alt", 1
 gksource_alt chnexport "source_alt", 1
 gkpitch_alt chnexport "pitch_alt", 1
 gkblend_alt chnexport "blend_alt", 1
+; added by danishfurniture
+gkinsttype1 chnexport "instype1", 2
+gkinsttype2 chnexport "instype2", 2
+gkinsttype3 chnexport "instype3", 2
+gkoption1 chnexport "option1", 2
+gkoption2 chnexport "option2", 2
+gkoption3 chnexport "option3", 2
+gkoption4 chnexport "option4", 2
+gkoption5 chnexport "option5", 2
+gkoption6 chnexport "option6", 2
+gkoption7 chnexport "option7", 2
 ; data buffers -- 100 Files maximum
 gilen[] init 100
 gichn[] init 100
@@ -79,7 +90,7 @@ gipeak[] init 100
         glen_arrayinit.append('\n')
         for i,f in enumerate(self.filehandler.files):
             #fsco_lines.append("f " + str(i + 1) + " 0 0 1 \"" + f + "\" 0 0 0\n")
-            fsco_lines.append("f " + str(400 + i) + " 0 0 1 \"" + f + "\" 0 0 1\n")
+            fsco_lines.append("f " + str(400 + i) + " 0 0 1 \"" + f + "\" 0 0 1\n") # 'f' in a Csound score is an 'ftgen' command
             glen_arrayinit.append("gSname[" + str(i) +"] = \"" + f + "\"\n")
             glen_arrayinit.append("gilen[" + str(i) +"] filelen \"" + f + "\"\n")
             glen_arrayinit.append("gichn[" + str(i) +"] filenchnls \"" + f + "\"\n")
@@ -88,9 +99,9 @@ gipeak[] init 100
         glen_arrayinit.append("ginumfiles init " + str(self.numFiles()) + "\n")
         fsco = ''.join(fsco_lines)
         self.arrayinitlines = ''.join(glen_arrayinit)
-        sco = isco + fsco
-        self.curOrc = self.preamble + self.orcheader + self.arrayinitlines + self.instrparser.getInstrString()
-        self.curSco = sco
+        sco = isco + fsco   # This is the score?
+        self.curOrc = self.preamble + self.orcheader + self.arrayinitlines + self.instrparser.getInstrString() # This builds the orchestra?
+        self.curSco = sco   # This is the score?
         try:
             if neb_globals.remount_fs is True:
                 os.system("sh /home/alarm/QB_Nebulae_V2/Code/scripts/mountfs.sh rw")
@@ -106,7 +117,16 @@ gipeak[] init 100
             print "Could not write log of current csd"
 
     def numFiles(self):
-        return self.filehandler.numFiles();
+        # return self.filehandler.numFiles() # there was a ";" at the end of this line
+        print self.instrparser.configEntry("typeInst")
+        if self.instrparser.configEntry("typeInst") is not None:
+	        print self.instrparser.configEntry("typeInst")[0]
+	        print self.instrparser.configEntry("typeInst")[1]
+	        print self.filehandler.numFiles()
+        #     return self.instrparser.configEntry("typeInst")[0]
+        # else:
+        #     return self.filehandler.numFiles() # there was a ";" at the end of this line
+        return self.filehandler.numFiles() # there was a ";" at the end of this line
 
     def getConfigDict(self):
         return self.instrparser.getConfigDict()

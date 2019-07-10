@@ -1,2 +1,4 @@
-VERSION=v2_1_2
-VERSION_DATE=4/24/2019
+VERSION=danish06
+VERSION_DATE=28Jun2019
+Based_on_QuBit_Version=2.1.2
+ADDITIONS=danishfurniture

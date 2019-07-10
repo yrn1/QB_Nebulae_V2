@@ -31,5 +31,13 @@ class CalibrationCollector(object):
                 line = ','.join(stuff)
                 myfile.write(line)
         os.system("sh /home/alarm/QB_Nebulae_V2/Code/scripts/mountfs.sh ro")
-            
 
+######## begin print calibration data (danishfurniture)
+
+	f = open(filepath + filename)
+	calibration = f.readlines()
+	f.close()
+	for i in range(0, len(calibration)):
+		print calibration[i]
+
+######## end print calibration data (danishfurniture)

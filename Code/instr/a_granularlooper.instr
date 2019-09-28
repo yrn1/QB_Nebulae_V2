@@ -221,6 +221,12 @@ instr 1
 ;;;;;;;;;;;;;;;;;;
 ;;;;; inits ;;;;;;
 ;;;;;;;;;;;;;;;;;;
+
+kselfile = round(gkwindow * (ginumfiles - 1))
+if kselfile < 0 then
+    kselfile = 0
+endif
+
 tableiw 254, 1, giPanNone
 tableiw 0, 0, giPanAllL
 tableiw 254, 1, giPanAllL
@@ -311,10 +317,10 @@ else
     else
         gkbufferlength = krecordedbuff * sr
     endif
-    kfilesr = gisr[gkfilesel]
-    kfilelen = gilen[gkfilesel]
+    kfilesr = gisr[kselfile]
+    kfilelen = gilen[kselfile]
     kfilesamps = (kfilelen * kfilesr) * (sr / kfilesr)
-    kpeakamp = gipeak[gkfilesel]
+    kpeakamp = gipeak[kselfile]
     ;klen = kfilesamps / sr
 	klen = kfilelen; * (kfilesr / sr); Length of Current File in seconds
 	kglen = kfilesamps / sr
@@ -362,38 +368,44 @@ if kpitch <= 1.005 && kpitch >= 0.995 then
 kpitch = 1.0
 endif
 
-; Window Shape
-kwindow portk gkwindow, 0.1
-kwindowsel = int(kwindow * 6)
-kwindowblend = kwindow * 6
+kwindowsel init 1
+kfileseltrig changed gkfilesel
+if kfileseltrig == 1 then
+    kwindowsel = kwindowsel + 1
+    if kwindowsel > 7 then
+        kwindowsel = 1
+    endif
+endif
+
+; kwindowblend = kwindow * 6
 kwindowchanged changed kwindowsel
 if kwindowchanged == 1 || kfirsttime == 1 then
-    if kwindowsel < 1  then
+    if kwindowsel == 1  then
         tablecopy giWin, giGaussian
         tablecopy giWinB, giBlkHarris
-    elseif kwindowsel < 2 then
+    elseif kwindowsel == 2 then
         tablecopy giWin, giBlkHarris
         tablecopy giWinB, giRampDown
-    elseif kwindowsel < 3 then
+    elseif kwindowsel == 3 then
         tablecopy giWin, giRampDown
         tablecopy giWinB, giBartlett
-    elseif kwindowsel < 4 then
+    elseif kwindowsel == 4 then
         tablecopy giWin, giBartlett
         tablecopy giWinB, giRampUp
-    elseif kwindowsel < 5 then
+    elseif kwindowsel == 5 then
         tablecopy giWin, giRampUp
         tablecopy giWinB, giHamming
-    elseif kwindowsel < 6 then
+    elseif kwindowsel == 6 then
         tablecopy giWin, giHamming
         tablecopy giWinB, giRectangle
-    elseif kwindowsel < 7 then
+    elseif kwindowsel == 7 then
         tablecopy giWin, giRectangle
     endif
     kfirsttime = 0
 endif
 
 ; Window Blend
-kwblend = kwindowblend - kwindowsel
+kwblend = kwindowsel
 tablemix giWinMix, 0, giwindowtablesize, giWin, 0, 1.0-kwblend, giWinB, 0, kwblend
 
 ; Density and Overlap
@@ -801,12 +813,12 @@ if gksource == 1 then
     endif
 else
     kwavfreq    = ((1/klen)*kpitch) * cent(krndpitchmod);
-    knumchn = gichn[gkfilesel]
-    kwaveformL = gkfilesel_offset + gkfilesel + 1
+    knumchn = gichn[kselfile]
+    kwaveformL = gkfilesel_offset + kselfile + 1
     asigL mincer atime, 0.8, kpitch * (kfilesr / sr), kwaveformL, kphaselock, ifftfilesize, idecim
-    knumchn = gichn[gkfilesel]
+    knumchn = gichn[kselfile]
     if knumchn == 2 then 
-        kwaveformR = gifile_right_offset + gkfilesel
+        kwaveformR = gifile_right_offset + kselfile
         asigR mincer atime, 0.8, kpitch * (kfilesr / sr), kwaveformR, kphaselock, ifftfilesize, idecim
     else
         kwaveformR = kwaveformL

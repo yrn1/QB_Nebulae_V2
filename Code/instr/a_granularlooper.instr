@@ -337,7 +337,7 @@ if (kloopsize <= 0.000035) then
 endif
 
 ; Set Speed
-if gkrecord == 0 || gkrecord_alt == 1 then
+if gkrecord == 0 then
     kspeed = (gkspeed * 8.0) - 4.0
 endif
 if abs(kspeed) <= 1.025 && abs(kspeed) >= 0.975 then
@@ -642,7 +642,7 @@ if kBufferEmpty == 1 then
     krecend = giMaxRecordBuffer
     krecwrap = 0
 else
-    if gkrecord == 0  || gkrecord_alt == 1 then
+    if gkrecord == 0 then
         if kmaintainsize == 1 then
             krecwrap = kloopstart
             if kspeed >= 0 then
@@ -656,7 +656,7 @@ else
                 krecstart = 0
             endif
             
-            if kspeed != 0 || gkrecord_alt == 1 then
+            if kspeed != 0 then
                 if kspeed == 0 then
                     krecend = giMaxRecordBuffer
                 else
@@ -700,7 +700,7 @@ endif
 ;arecR = aprevmixr
 arecL = amixl
 arecR = amixr
-kfin, kbuffsize, koverlapFlagA CplxBufRec2 arecL, arecR, ainl * ablenddry, ainr * ablenddry, giftLA, giftRA, giftLB, giftRB, krecordB, krecstart, krecend, krecwrap, gkrecord_alt, kActiveBuffer
+kfin, kbuffsize, koverlapFlagA CplxBufRec2 arecL, arecR, ainl * ablenddry, ainr * ablenddry, giftLA, giftRA, giftLB, giftRB, krecordB, krecstart, krecend, krecwrap, 0, kActiveBuffer
 kfinchanged trigger kfin, 0.5, 0 ; Done Recording
 kfinstarted trigger kfin, 0.5, 1 ; Started Recording
 koverlaptrig trigger koverlapFlagA, 0.5, 0 ; overwrite of buffer complete
@@ -719,13 +719,11 @@ if kfinchanged == 1 then
     ;tablemix giftRB, krecstart, kbuffsize, giftRA, krecstart, 1.0, giftEmpty, 0, 0.0
     event "i", 2, 0, -1, krecstart, kbuffsize
     ;kcopyingbuffer = 1
-    if gkrecord_alt == 0 then
-        krecordB = 0
-    endif
+    krecordB = 0
     if kmaintainsize == 1 then
         kprevsize = krecordedbuff
         knewsize = kbuffsize/ (sr * 1.0)
-        if knewsize < kprevsize || gkrecord_alt == 1 then
+        if knewsize < kprevsize then
             krecordedbuff = kprevsize
         else
             krecordedbuff = knewsize
@@ -947,6 +945,25 @@ endif
 
 ;printks "dry: %f\tvocoder: %f\tgranular: %f\n", 0.25, k(ablenddry), k(ablendvocoder), k(ablendgranular)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Reset-triggered gate ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+ktrig metro kr
+
+kgatetresh max_k aphs, ktrig, 2
+kgatetrig trigger kgatetresh, 0.999, 0
+gkgate init 0
+
+if ksynctrig == 1 || gkrecord_alt == 1 then
+    gkgate = 1
+elseif kgatetrig == 1 then
+    gkgate = 0
+endif
+
+aoutl *= a(gkgate)
+aoutr *= a(gkgate)
+
 outs aoutl, aoutr ; output
 
 
@@ -956,7 +973,6 @@ outs aoutl, aoutr ; output
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Set EOL Pulse Output
-ktrig metro kr
 kphssync max_k aphssync, ktrig, 2
 if kphssync == 1 then
     if krecordA == 1 then
